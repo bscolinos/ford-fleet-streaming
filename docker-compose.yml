@@ -1,0 +1,165 @@
+version: '3.8'
+
+services:
+  # ==========================================================================
+  # Redpanda (Kafka-compatible message broker)
+  # ==========================================================================
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v23.3.4
+    container_name: ford-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp
+      - '1'
+      - --reserve-memory
+      - 0M
+      - --overprovisioned
+      - --node-id
+      - '0'
+      - --kafka-addr
+      - PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr
+      - PLAINTEXT://redpanda:29092,OUTSIDE://localhost:9092
+      - --pandaproxy-addr
+      - 0.0.0.0:8082
+      - --advertise-pandaproxy-addr
+      - localhost:8082
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+      - "8082:8082"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ford-network
+
+  # ==========================================================================
+  # Redpanda Console (Kafka UI)
+  # ==========================================================================
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:v2.3.8
+    container_name: ford-redpanda-console
+    ports:
+      - "8081:8080"
+    environment:
+      KAFKA_BROKERS: redpanda:29092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - ford-network
+
+  # ==========================================================================
+  # Backend API (FastAPI)
+  # ==========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ford-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SINGLESTORE_HOST=${SINGLESTORE_HOST:-host.docker.internal}
+      - SINGLESTORE_PORT=${SINGLESTORE_PORT:-3306}
+      - SINGLESTORE_DATABASE=${SINGLESTORE_DATABASE:-ford_fleet}
+      - SINGLESTORE_USER=${SINGLESTORE_USER:-admin}
+      - SINGLESTORE_PASSWORD=${SINGLESTORE_PASSWORD:-}
+      - DB_ADMIN_USER=${DB_ADMIN_USER:-demo_admin}
+      - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD:-AdminPass123!}
+      - DB_TERRITORY_MANAGER_USER=${DB_TERRITORY_MANAGER_USER:-territory_manager_1}
+      - DB_TERRITORY_MANAGER_PASSWORD=${DB_TERRITORY_MANAGER_PASSWORD:-TerritoryPass123!}
+      - DB_REGIONAL_MANAGER_USER=${DB_REGIONAL_MANAGER_USER:-regional_manager_1}
+      - DB_REGIONAL_MANAGER_PASSWORD=${DB_REGIONAL_MANAGER_PASSWORD:-RegionalPass123!}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-super-secret-key-change-in-production}
+      - MODEL_API_AUTH=${MODEL_API_AUTH:-}
+      - MODEL_NAME=${MODEL_NAME:-claude-sonnet-4-5-79066}
+      - MODEL_API_ENDPOINT=${MODEL_API_ENDPOINT:-https://ai.us-east-1.cloud.singlestore.com/5cc87edb-3e18-48f8-bef9-6097eb8fcab6/v1}
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ford-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ==========================================================================
+  # Kafka Producer (Telemetry Generator)
+  # ==========================================================================
+  producer:
+    build:
+      context: ./kafka/producer
+      dockerfile: Dockerfile
+    container_name: ford-producer
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
+      - EVENTS_PER_SECOND=${EVENTS_PER_SECOND:-10}
+      - ANOMALY_PROBABILITY=${ANOMALY_PROBABILITY:-0.02}
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ford-network
+
+  # ==========================================================================
+  # Kafka Consumer (Telemetry Ingestor)
+  # ==========================================================================
+  consumer:
+    build:
+      context: ./kafka/consumer
+      dockerfile: Dockerfile
+    container_name: ford-consumer
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=redpanda:29092
+      - SINGLESTORE_HOST=${SINGLESTORE_HOST:-host.docker.internal}
+      - SINGLESTORE_PORT=${SINGLESTORE_PORT:-3306}
+      - SINGLESTORE_DATABASE=${SINGLESTORE_DATABASE:-ford_fleet}
+      - SINGLESTORE_USER=${SINGLESTORE_USER:-admin}
+      - SINGLESTORE_PASSWORD=${SINGLESTORE_PASSWORD:-}
+      - BATCH_SIZE=${BATCH_SIZE:-100}
+      - BATCH_TIMEOUT=${BATCH_TIMEOUT:-1.0}
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - ford-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # ==========================================================================
+  # Frontend (Static file server)
+  # ==========================================================================
+  frontend:
+    image: nginx:alpine
+    container_name: ford-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - ford-network
+
+networks:
+  ford-network:
+    driver: bridge
+
+volumes:
+  redpanda-data:
+

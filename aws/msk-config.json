@@ -1,0 +1,70 @@
+{
+  "description": "Ford Fleet Demo - MSK Cluster Configuration",
+  "clusterConfig": {
+    "clusterName": "ford-fleet-demo",
+    "kafkaVersion": "3.5.1",
+    "numberOfBrokerNodes": 3,
+    "brokerNodeGroupInfo": {
+      "instanceType": "kafka.m5.large",
+      "clientSubnets": [
+        "subnet-xxxxxxxxx",
+        "subnet-yyyyyyyyy",
+        "subnet-zzzzzzzzz"
+      ],
+      "securityGroups": [
+        "sg-xxxxxxxxx"
+      ],
+      "storageInfo": {
+        "ebsStorageInfo": {
+          "volumeSize": 100
+        }
+      }
+    },
+    "encryptionInfo": {
+      "encryptionInTransit": {
+        "clientBroker": "TLS_PLAINTEXT",
+        "inCluster": true
+      }
+    },
+    "configurationInfo": {
+      "arn": "arn:aws:kafka:us-east-1:ACCOUNT:configuration/ford-fleet-config/REVISION",
+      "revision": 1
+    },
+    "loggingInfo": {
+      "brokerLogs": {
+        "cloudWatchLogs": {
+          "enabled": true,
+          "logGroup": "/aws/msk/ford-fleet-demo"
+        }
+      }
+    },
+    "tags": {
+      "Project": "FordFleetDemo",
+      "Environment": "Demo"
+    }
+  },
+  "customConfiguration": {
+    "name": "ford-fleet-config",
+    "serverProperties": [
+      "auto.create.topics.enable=true",
+      "default.replication.factor=2",
+      "min.insync.replicas=1",
+      "num.partitions=6",
+      "log.retention.hours=24",
+      "log.segment.bytes=1073741824"
+    ]
+  },
+  "topics": [
+    {
+      "name": "customer_a_telemetry",
+      "partitions": 6,
+      "replicationFactor": 2
+    },
+    {
+      "name": "customer_b_telemetry",
+      "partitions": 6,
+      "replicationFactor": 2
+    }
+  ]
+}
+

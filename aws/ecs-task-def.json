@@ -1,0 +1,160 @@
+{
+  "family": "ford-fleet-demo",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/ford-fleet-backend:latest",
+      "cpu": 512,
+      "memory": 1024,
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "SINGLESTORE_DATABASE",
+          "value": "ford_fleet"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "SINGLESTORE_HOST",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:host::"
+        },
+        {
+          "name": "SINGLESTORE_PORT",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:port::"
+        },
+        {
+          "name": "DB_ADMIN_USER",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:admin_user::"
+        },
+        {
+          "name": "DB_ADMIN_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:admin_password::"
+        },
+        {
+          "name": "JWT_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/jwt:secret_key::"
+        },
+        {
+          "name": "MODEL_API_AUTH",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/ai:api_key::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ford-fleet-demo",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    },
+    {
+      "name": "producer",
+      "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/ford-fleet-producer:latest",
+      "cpu": 256,
+      "memory": 512,
+      "essential": false,
+      "environment": [
+        {
+          "name": "EVENTS_PER_SECOND",
+          "value": "10"
+        },
+        {
+          "name": "ANOMALY_PROBABILITY",
+          "value": "0.02"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "KAFKA_BOOTSTRAP_SERVERS",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/msk:bootstrap_servers::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ford-fleet-demo",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "producer"
+        }
+      }
+    },
+    {
+      "name": "consumer",
+      "image": "ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/ford-fleet-consumer:latest",
+      "cpu": 256,
+      "memory": 512,
+      "essential": false,
+      "environment": [
+        {
+          "name": "BATCH_SIZE",
+          "value": "100"
+        },
+        {
+          "name": "BATCH_TIMEOUT",
+          "value": "1.0"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "KAFKA_BOOTSTRAP_SERVERS",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/msk:bootstrap_servers::"
+        },
+        {
+          "name": "SINGLESTORE_HOST",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:host::"
+        },
+        {
+          "name": "SINGLESTORE_PORT",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:port::"
+        },
+        {
+          "name": "SINGLESTORE_USER",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:ingest_user::"
+        },
+        {
+          "name": "SINGLESTORE_PASSWORD",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:ACCOUNT:secret:ford-fleet/singlestore:ingest_password::"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ford-fleet-demo",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "consumer"
+        }
+      }
+    }
+  ],
+  "tags": [
+    {
+      "key": "Project",
+      "value": "FordFleetDemo"
+    },
+    {
+      "key": "Environment",
+      "value": "Demo"
+    }
+  ]
+}
+

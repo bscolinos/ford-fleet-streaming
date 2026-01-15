@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ford Fleet Management | SingleStore Demo</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- Leaflet for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-small">
+                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+                        <ellipse cx="24" cy="24" rx="22" ry="14" stroke="currentColor" stroke-width="2"/>
+                        <text x="24" y="28" text-anchor="middle" fill="currentColor" font-size="10" font-weight="bold">FORD</text>
+                    </svg>
+                </div>
+                <h1>Fleet Management</h1>
+            </div>
+            
+            <div class="header-center">
+                <div class="connection-status" id="connection-status">
+                    <span class="status-dot"></span>
+                    <span class="status-text">Connecting...</span>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="role-selector">
+                    <label for="role-select">View as:</label>
+                    <select id="role-select" class="role-select">
+                        <option value="demo_admin">Admin (Full Access)</option>
+                        <option value="regional_manager_1">Regional Manager (West Region)</option>
+                        <option value="territory_manager_1" selected>Territory Manager (West-1)</option>
+                    </select>
+                </div>
+                <div class="rls-indicator" id="rls-indicator">
+                    <span class="rls-dot"></span>
+                    <span class="rls-text">Row-Level Security Active</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label>Time Range</label>
+                <div class="granularity-selector">
+                    <button class="granularity-btn active" data-granularity="day">Day</button>
+                    <button class="granularity-btn" data-granularity="month">Month</button>
+                    <button class="granularity-btn" data-granularity="year">Year</button>
+                </div>
+            </div>
+            
+            <div class="filter-group">
+                <label>Date Range</label>
+                <input type="date" id="start-date" class="date-input">
+                <span class="date-separator">to</span>
+                <input type="date" id="end-date" class="date-input">
+            </div>
+            
+            <div class="filter-group">
+                <label>Customer</label>
+                <select id="customer-filter" class="select-input">
+                    <option value="">All Customers</option>
+                    <option value="customer_a">Acme Logistics</option>
+                    <option value="customer_b">BlueStar Transport</option>
+                </select>
+            </div>
+            
+            <button class="btn-refresh" id="btn-refresh">Refresh</button>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- KPI Cards -->
+            <section class="kpi-section">
+                <div class="kpi-card">
+                    <div class="kpi-icon vehicles-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="8" rx="2"/>
+                            <path d="M5 11V9a2 2 0 012-2h10a2 2 0 012 2v2"/>
+                            <circle cx="7" cy="17" r="1.5"/>
+                            <circle cx="17" cy="17" r="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-total-vehicles">-</span>
+                        <span class="kpi-label">Total Vehicles</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon active-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-active-vehicles">-</span>
+                        <span class="kpi-label">Active Now</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon speed-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 8v4"/>
+                            <path d="M12 16h.01"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-avg-speed">-</span>
+                        <span class="kpi-label">Avg Speed (mph)</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card">
+                    <div class="kpi-icon fuel-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 22h12V8l-3-3H6L3 8v14z"/>
+                            <path d="M18 22V12l-3-3"/>
+                            <path d="M18 12h3v6h-3"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-avg-fuel">-</span>
+                        <span class="kpi-label">Avg Fuel %</span>
+                    </div>
+                </div>
+                
+                <div class="kpi-card anomaly-card">
+                    <div class="kpi-icon anomaly-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                            <line x1="12" y1="9" x2="12" y2="13"/>
+                            <line x1="12" y1="17" x2="12.01" y2="17"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-content">
+                        <span class="kpi-value" id="kpi-anomalies">-</span>
+                        <span class="kpi-label">Unacknowledged Alerts</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Charts Row -->
+            <section class="charts-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Fleet Performance</h3>
+                        <div class="chart-legend" id="performance-legend"></div>
+                    </div>
+                    <canvas id="performance-chart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3>Anomaly Trends</h3>
+                    </div>
+                    <canvas id="anomaly-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Map and Anomalies Row -->
+            <section class="map-anomaly-section">
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3>Fleet Map</h3>
+                        <span class="vehicle-count" id="map-vehicle-count">0 vehicles</span>
+                    </div>
+                    <div id="fleet-map"></div>
+                </div>
+                
+                <div class="anomaly-panel">
+                    <div class="anomaly-header">
+                        <h3>Recent Anomalies</h3>
+                        <button class="btn-view-all" id="btn-view-all-anomalies">View All</button>
+                    </div>
+                    <div class="anomaly-list" id="anomaly-list">
+                        <div class="loading-placeholder">Loading anomalies...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Vehicles Table -->
+            <section class="vehicles-section">
+                <div class="section-header">
+                    <h3>Fleet Vehicles</h3>
+                    <div class="table-controls">
+                        <input type="text" id="vehicle-search" class="search-input" placeholder="Search vehicles...">
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="vehicles-table">
+                        <thead>
+                            <tr>
+                                <th>Vehicle</th>
+                                <th>Driver</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Speed</th>
+                                <th>Fuel</th>
+                                <th>Temp</th>
+                                <th>Last Seen</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicles-tbody">
+                            <tr><td colspan="8" class="loading-placeholder">Loading vehicles...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+
+        <!-- AI Chat Panel -->
+        <div class="ai-panel" id="ai-panel">
+            <div class="ai-panel-header">
+                <h3>Fleet AI Assistant</h3>
+                <button class="btn-toggle-ai" id="btn-toggle-ai">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="ai-panel-content">
+                <div class="ai-messages" id="ai-messages">
+                    <div class="ai-message assistant">
+                        <p>Hello! I'm your Fleet AI Assistant. I can help you with:</p>
+                        <ul>
+                            <li>Summarizing driver notes</li>
+                            <li>Analyzing fleet performance</li>
+                            <li>Identifying trends and issues</li>
+                        </ul>
+                        <p>What would you like to know about your fleet?</p>
+                    </div>
+                </div>
+                <div class="ai-input-container">
+                    <input type="text" id="ai-input" class="ai-input" placeholder="Ask about your fleet...">
+                    <button class="btn-send-ai" id="btn-send-ai">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"/>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="ai-quick-actions">
+                    <button class="ai-quick-btn" data-action="summarize">Summarize Notes</button>
+                    <button class="ai-quick-btn" data-action="issues">Top Issues</button>
+                    <button class="ai-quick-btn" data-action="performance">Performance Analysis</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Toggle Button -->
+        <button class="ai-toggle-btn" id="ai-toggle-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1v1a2 2 0 01-2 2H5a2 2 0 01-2-2v-1H2a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z"/>
+                <circle cx="8.5" cy="14.5" r="1.5"/>
+                <circle cx="15.5" cy="14.5" r="1.5"/>
+            </svg>
+            <span>AI</span>
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/auth.js"></script>
+    <script src="js/websocket.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/ai.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
+
