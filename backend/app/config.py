@@ -10,6 +10,11 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings
 
 
+def get_env(key: str, default: str | None = None) -> str | None:
+    """Fetch an environment variable with an optional default."""
+    return os.getenv(key, default)
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment."""
     
@@ -96,4 +101,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """Get cached settings instance."""
     return Settings()
-

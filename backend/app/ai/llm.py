@@ -9,12 +9,12 @@ import boto3
 from botocore.config import Config
 from botocore import UNSIGNED
 
-from app.config import get_settings
+from app.config import get_env, get_settings
 
 settings = get_settings()
 
 # Model configuration
-model_api_auth = settings.model_api_auth
+model_api_auth = get_env("MODEL_API_AUTH", settings.model_api_auth)
 model_name = settings.model_name
 model_api_endpoint = settings.model_api_endpoint
 
@@ -178,4 +178,3 @@ User Question: {question}
 Please provide a helpful and actionable response based on the fleet data above."""
     
     return get_chat_response(prompt, system_prompt)
-
