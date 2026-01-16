@@ -93,14 +93,14 @@ def get_fleet_summary(
     
     return {
         "total_vehicles": vehicle_result[0]["total_vehicles"] if vehicle_result else 0,
-        "active_vehicles": vehicle_result[0]["active_vehicles"] if vehicle_result else 0,
+        "active_vehicles": vehicle_result[0]["active_vehicles"] or 0 if vehicle_result else 0,
         "avg_speed": float(telemetry_result[0]["avg_speed"] or 0) if telemetry_result else 0,
         "avg_fuel_pct": float(telemetry_result[0]["avg_fuel_pct"] or 0) if telemetry_result else 0,
         "avg_engine_temp": float(telemetry_result[0]["avg_engine_temp"] or 0) if telemetry_result else 0,
-        "telemetry_count": telemetry_result[0]["telemetry_count"] if telemetry_result else 0,
-        "total_anomalies": anomaly_result[0]["total_anomalies"] if anomaly_result else 0,
-        "unacknowledged_anomalies": anomaly_result[0]["unacknowledged"] if anomaly_result else 0,
-        "critical_anomalies": anomaly_result[0]["critical_count"] if anomaly_result else 0,
+        "telemetry_count": telemetry_result[0]["telemetry_count"] or 0 if telemetry_result else 0,
+        "total_anomalies": anomaly_result[0]["total_anomalies"] or 0 if anomaly_result else 0,
+        "unacknowledged_anomalies": anomaly_result[0]["unacknowledged"] or 0 if anomaly_result else 0,
+        "critical_anomalies": anomaly_result[0]["critical_count"] or 0 if anomaly_result else 0,
     }
 
 
@@ -114,10 +114,11 @@ def get_fleet_timeseries(
     """Get time-series data for dashboard charts."""
     
     # Determine date truncation based on granularity
+    # Use %% to escape % for Python string formatting
     if granularity == "year":
-        date_trunc = "DATE_FORMAT(ts, '%Y-01-01')"
+        date_trunc = "DATE_FORMAT(ts, '%%Y-01-01')"
     elif granularity == "month":
-        date_trunc = "DATE_FORMAT(ts, '%Y-%m-01')"
+        date_trunc = "DATE_FORMAT(ts, '%%Y-%%m-01')"
     else:  # day
         date_trunc = "DATE(ts)"
     

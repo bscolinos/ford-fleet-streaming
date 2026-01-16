@@ -81,6 +81,50 @@ docker compose logs -f
 - **API Docs**: http://localhost:8000/docs
 - **Redpanda Console**: http://localhost:8081
 
+## Local Development (without Docker)
+
+For development without Docker, you can run the frontend and backend separately:
+
+### 1. Setup Python Environment
+
+```bash
+cd ford_demo
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+```
+
+### 2. Configure Environment
+
+```bash
+cp env.example .env
+# Edit .env with your SingleStore credentials
+```
+
+### 3. Start Backend
+
+```bash
+cd backend
+source ../.venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8080
+```
+
+### 4. Start Frontend (separate terminal)
+
+```bash
+cd frontend
+python3 -m http.server 8000
+```
+
+### 5. Access the Demo
+
+- **Dashboard**: http://localhost:8000
+- **API**: http://localhost:8080/docs
+
+Note: For streaming data, you'll need either:
+- EC2 streaming setup (see `ec2-streaming/README.md`)
+- Or run Docker Compose for local Kafka: `docker compose up redpanda producer consumer`
+
 ### Demo Credentials
 
 | Username | Password | Role | Scope |

@@ -92,6 +92,13 @@ const Charts = {
     initPerformanceChart() {
         const ctx = document.getElementById('performance-chart');
         if (!ctx) return;
+        if (!window.Chart) return;
+
+        const existing = Chart.getChart(ctx);
+        if (existing) {
+            this.performanceChart = existing;
+            return;
+        }
 
         this.performanceChart = new Chart(ctx, {
             type: 'line',
@@ -167,6 +174,13 @@ const Charts = {
     initAnomalyChart() {
         const ctx = document.getElementById('anomaly-chart');
         if (!ctx) return;
+        if (!window.Chart) return;
+
+        const existing = Chart.getChart(ctx);
+        if (existing) {
+            this.anomalyChart = existing;
+            return;
+        }
 
         this.anomalyChart = new Chart(ctx, {
             type: 'bar',
@@ -222,24 +236,57 @@ const Charts = {
      * Update performance chart with new data
      */
     updatePerformanceChart(timeseries) {
-        if (!this.performanceChart || !timeseries) return;
+        console.log('updatePerformanceChart called with', timeseries?.length, 'points');
+        if (!window.Chart) {
+            console.warn('Chart.js not available yet');
+            return;
+        }
+        if (!this.performanceChart) {
+            this.initPerformanceChart();
+        }
+        if (!this.performanceChart) {
+            console.log('No performance chart instance');
+            return;
+        }
+        if (!timeseries || timeseries.length === 0) {
+            console.log('No timeseries data');
+            this.performanceChart.data.labels = [];
+            this.performanceChart.data.datasets.forEach(dataset => {
+                dataset.data = [];
+            });
+            this.performanceChart.update('none');
+            return;
+        }
 
         const labels = timeseries.map(t => this.formatDate(t.period));
         const speeds = timeseries.map(t => t.avg_speed);
         const fuels = timeseries.map(t => t.avg_fuel);
         const temps = timeseries.map(t => t.avg_temp);
 
+        console.log('Chart labels:', labels);
+        console.log('Chart speeds:', speeds);
+
         this.performanceChart.data.labels = labels;
         this.performanceChart.data.datasets[0].data = speeds;
         this.performanceChart.data.datasets[1].data = fuels;
         this.performanceChart.data.datasets[2].data = temps;
         this.performanceChart.update('none');
+        requestAnimationFrame(() => {
+            this.performanceChart.resize();
+        });
     },
 
     /**
      * Update anomaly chart with new data
      */
     updateAnomalyChart(anomalies) {
+        if (!window.Chart) {
+            console.warn('Chart.js not available yet');
+            return;
+        }
+        if (!this.anomalyChart) {
+            this.initAnomalyChart();
+        }
         if (!this.anomalyChart || !anomalies) return;
 
         // Group anomalies by date and severity
@@ -265,6 +312,9 @@ const Charts = {
         this.anomalyChart.data.datasets[1].data = warning;
         this.anomalyChart.data.datasets[2].data = info;
         this.anomalyChart.update('none');
+        requestAnimationFrame(() => {
+            this.anomalyChart.resize();
+        });
     },
 
     /**

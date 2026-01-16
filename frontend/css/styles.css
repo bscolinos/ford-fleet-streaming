@@ -688,6 +688,9 @@ body {
 }
 
 .chart-container canvas {
+    display: block;
+    width: 100% !important;
+    height: 280px !important;
     max-height: 280px !important;
 }
 

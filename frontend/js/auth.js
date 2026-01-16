@@ -6,7 +6,8 @@
 const Auth = {
     token: null,
     user: null,
-    apiBase: 'http://localhost:8000',
+    // Auto-detect: Docker (nginx on 8080) uses same-origin, local dev uses explicit port
+    apiBase: window.location.port === '8080' ? '' : 'http://localhost:8080',
 
     // Demo user configurations
     demoUsers: {
